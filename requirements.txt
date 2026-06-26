@@ -2,3 +2,4 @@ websockets
 streamlink
 fake-useragent
 tls-client
+typing_extensions

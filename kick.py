@@ -13,12 +13,17 @@ import tls_client
 
 CLIENT_TOKEN = "e1393935a959b4020a4491574f6490129f678acdaa92760471263db43487f823"
 
-channel = ""
+#channel = ""
+# aspic.ovh
+#channel = "morphee6207"
+channel = "ellstream"
+#channel = "maerioff"
 channel_id = None
 stream_id = None
 max_threads = 0
 threads = []
-thread_limit = None
+# thread_limit = None
+thread_limit = 250
 active = 0
 stop = False
 start_time = None
@@ -30,6 +35,68 @@ heartbeats = 0
 viewers = 0
 last_check = 0
 
+BROWSER_PROFILES = [
+    {
+        "client_identifier": "chrome_120",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "sec_ch_ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "platform": '"Windows"',
+    },
+    {
+        "client_identifier": "chrome_119",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "sec_ch_ua": '"Not_A Brand";v="24", "Chromium";v="119", "Google Chrome";v="119"',
+        "platform": '"macOS"',
+    },
+    {
+        "client_identifier": "chrome_124",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "sec_ch_ua": '"Chromium";v="124", "Not(A:Brand";v="99", "Google Chrome";v="124"',
+        "platform": '"Linux"',
+    },
+    {
+        "client_identifier": "safari_15_6_1",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15",
+        "sec_ch_ua": None,  # Safari n'envoie pas ces headers
+        "platform": None,
+    },
+    {
+        "client_identifier": "firefox_120",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+        "sec_ch_ua": None,  # Firefox non plus
+        "platform": None,
+    },
+]
+
+def get_randomized_session():
+    profile = random.choice(BROWSER_PROFILES)
+
+    s = tls_client.Session(
+        client_identifier=profile["client_identifier"],
+        random_tls_extension_order=True,
+    )
+
+    headers = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': random.choice(['en-US,en;q=0.9', 'en-GB,en;q=0.8', 'fr-FR,fr;q=0.9,en;q=0.8']),
+        'Connection': 'keep-alive',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': profile["user_agent"],
+    }
+
+    # n'ajoute les headers sec-ch-ua que pour les profils Chromium
+    if profile["sec_ch_ua"]:
+        headers['sec-ch-ua'] = profile["sec_ch_ua"]
+        headers['sec-ch-ua-mobile'] = '?0'
+        headers['sec-ch-ua-platform'] = profile["platform"]
+
+    s.headers.update(headers)
+    return s
+
 def clean_channel_name(name):
     if "kick.com/" in name:
         parts = name.split("kick.com/")
@@ -40,24 +107,8 @@ def clean_channel_name(name):
 def get_channel_info(name):
     global channel_id, stream_id
     try:
-        s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
-        s.headers.update({
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Referer': 'https://kick.com/',
-            'Origin': 'https://kick.com',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-        })
-        
+        s = get_randomized_session()
+
         try:
             response = s.get(f'https://kick.com/api/v2/channels/{name}')
             if response.status_code == 200:
@@ -124,22 +175,8 @@ def get_channel_info(name):
 
 def get_token():
     try:
-        s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
-        s.headers.update({
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-        })
-        
+        s = get_randomized_session()
+
         try:
             s.get("https://kick.com")
             s.headers["X-CLIENT-TOKEN"] = CLIENT_TOKEN
@@ -178,23 +215,7 @@ def get_viewer_count():
         return 0
     
     try:
-        s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
-        s.headers.update({
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Referer': 'https://kick.com/',
-            'Origin': 'https://kick.com',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-        })
+        s = get_randomized_session()
         
         url = f"https://kick.com/current-viewers?ids[]={stream_id}"
         response = s.get(url)
@@ -354,24 +375,26 @@ def run(thread_count, channel_name):
 if __name__ == "__main__":
     try:
         os.system('cls' if os.name == 'nt' else 'clear')
-        channel_input = input("Enter channel name or URL: ").strip()
-        if not channel_input:
-            print("Channel name needed.")
-            sys.exit(1)
-        
-        while True:
-            try:
-                thread_input = int(input("Enter number of viewers: ").strip())
-                if thread_input > 0:
-                    break
-                else:
-                    print("Must be greater than 0")
-            except ValueError:
-                print("Enter a valid number")
-        
-        run(thread_input, channel_input)
+       # channel_input = input("Enter channel name or URL: ").strip()
+       # if not channel_input:
+       #     print("Channel name needed.")
+       #     sys.exit(1)
+       # 
+       # while True:
+       #     try:
+       #         thread_input = int(input("Enter number of viewers: ").strip())
+       #         if thread_input > 0:
+       #             break
+       #         else:
+       #             print("Must be greater than 0")
+       #     except ValueError:
+       #         print("Enter a valid number")
+       # 
+        #run(thread_input, channel_input)
+        run(thread_limit,channel)
     except KeyboardInterrupt:
         stop = True
         print("Stopping...")
 
         sys.exit(0)
+
